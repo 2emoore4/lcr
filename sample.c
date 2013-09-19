@@ -36,7 +36,6 @@ static void Demo_6_8BppPatternSeqDemo();
 static void Demo_7_InternalHWTestPatternModeDemo();
 static void Demo_8_VariableBitDepthPatSeqDemo();
 static void Demo_9_SolutionDemo();
-static void do_cool_stuff();
 
 /* main() function */
 int main(int argc, char *argv[])
@@ -61,7 +60,7 @@ int main(int argc, char *argv[])
     printf("Demo#6 - Configuring 8bpp pattern Sequence\n");
 	printf("Demo#7 - Run Internal Hardware test patterns\n");
 	printf("Demo#8 - Custom Sequence configuration\n");
-    printf("9 - do cool stuff\n\n");
+    printf("Demo#9 - Solution demo\n\n");
 
     while((ch=getchar()) != 'x')
     {
@@ -93,7 +92,7 @@ int main(int argc, char *argv[])
             Demo_8_VariableBitDepthPatSeqDemo();
             break;
         case '9':
-            do_cool_stuff();
+            Demo_9_SolutionDemo();
             break;
         case '0':
             Demo_1_ReadLightCrafterVersion();
@@ -822,58 +821,6 @@ static void Demo_8_VariableBitDepthPatSeqDemo()
 	printf("Stoping the sequence\n");
 
 	LCR_CMD_SetDisplayMode((LCR_DisplayMode_t)(0x00)); //Setting back to static display mode
-}
-
-// my own demo
-static void do_cool_stuff() {
-    LCR_PatternSeqSetting_t patSeqSet;
-
-    printf("\n\n****Running Demo #5 - 1bpp Pattern Sequence ****\n\n");
-
-    LCR_CMD_SetDisplayMode((LCR_DisplayMode_t)(0x04));
-
-    printf("Selecting BIT_DEPTH = 1, NUM_PAT = 8, TRIGGER_TYPE = AUTO, AUTO_TRIG_PEIORD = 33334uSec, EXPOSURE = 33334uSec, LED = GREEN\n");
-    patSeqSet.BitDepth = 1;
-    patSeqSet.NumPatterns = 8;
-    patSeqSet.PatternType = PTN_TYPE_NORMAL;
-    patSeqSet.InputTriggerDelay = 0;
-    patSeqSet.InputTriggerType = TRIGGER_TYPE_AUTO;
-    patSeqSet.AutoTriggerPeriod = 33334;
-    patSeqSet.ExposureTime = 33334;
-    patSeqSet.LEDSelect = LED_GREEN;
-    patSeqSet.Repeat = 0;
-    LCR_CMD_SetPatternSeqSetting(&patSeqSet);
-
-    printf("Downloading pat0\n");
-    LCR_CMD_DefinePatternBMP(0,"./Images/PatSeqImages/pattern_1_00.bmp");
-
-    printf("Downloading pat1...\n");
-    LCR_CMD_DefinePatternBMP(1,"./Images/PatSeqImages/pattern_1_01.bmp");
-
-    printf("Downloading pat2...\n");
-    LCR_CMD_DefinePatternBMP(2,"./Images/PatSeqImages/pattern_1_02.bmp");
-
-    printf("Downloading pat3...\n");
-    LCR_CMD_DefinePatternBMP(3,"./Images/PatSeqImages/pattern_1_03.bmp");
-
-    printf("Downloading pat4...\n");
-    LCR_CMD_DefinePatternBMP(4,"./Images/PatSeqImages/pattern_1_04.bmp");
-
-    printf("Downloading pat5...\n");
-    LCR_CMD_DefinePatternBMP(5,"./Images/PatSeqImages/pattern_1_05.bmp");
-
-    printf("Downloading pat6...\n");
-    LCR_CMD_DefinePatternBMP(6,"./Images/PatSeqImages/pattern_1_06.bmp");
-
-    printf("Downloading pat7...\n");
-    LCR_CMD_DefinePatternBMP(7,"./Images/PatSeqImages/pattern_1_07.bmp");
-
-    printf("Starting Pattern Sequence...\n");
-    LCR_CMD_StartPatternSeq(1);
-    mSleep(10000);
-    LCR_CMD_StartPatternSeq(0); //Stop pattern sequence
-
-    LCR_CMD_SetDisplayMode((LCR_DisplayMode_t)(0x00)); //Setting back to static display mode
 }
 
 /* Demo-9: Demonstrated saving, loading and deleting a solution */
