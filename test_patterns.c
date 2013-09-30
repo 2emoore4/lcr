@@ -1,14 +1,18 @@
 #include <unistd.h>
+#include <time.h>
 
 #include "common.h"
 #include "error.h"
 #include "lcr_cmd.h"
 
+static void mSleep(unsigned long int mSeconds);
 static void flash_solid_color();
 static void flash_solid_color_at_speed(int speed, int exposure_time);
 static void flash_half_color();
 static void flash_half_color_at_speed(int speed, int exposure_time);
 static void flash_max_patterns();
+static void display_vertical_line();
+static void dynamic_load_test();
 
 /* main() function */
 int main(int argc, char *argv[])
@@ -31,6 +35,10 @@ int main(int argc, char *argv[])
             flash_half_color();
         } else if (ch == '3') {
             flash_max_patterns();
+        } else if (ch == '4') {
+            display_vertical_line();
+        } else if (ch == '5') {
+            dynamic_load_test();
         }
     }
 
@@ -40,7 +48,7 @@ int main(int argc, char *argv[])
 }
 
 static void flash_solid_color() {
-    int speed = 31900;
+    int speed = 13950;
     int exposure_time = 600;
     flash_solid_color_at_speed(speed, exposure_time);
 
@@ -102,7 +110,7 @@ static void flash_solid_color_at_speed(int speed, int exposure_time) {
 }
 
 static void flash_half_color() {
-    int speed = 31900;
+    int speed = 13950;
     int exposure_time = 600;
     flash_half_color_at_speed(speed, exposure_time);
 
@@ -176,7 +184,7 @@ static void flash_half_color_at_speed(int speed, int exposure_time) {
 static void flash_max_patterns() {
     LCR_PatternSeqSetting_t patSeqSet;
 
-    printf("\n\nrunning flash_half_color demo for ten seconds\n\n");
+    printf("\n\nrunning sequence with a bunch of patterns\n\n");
 
     LCR_CMD_SetDisplayMode((LCR_DisplayMode_t)(0x04));
 
@@ -185,13 +193,12 @@ static void flash_max_patterns() {
     patSeqSet.PatternType = PTN_TYPE_NORMAL;
     patSeqSet.InputTriggerDelay = 0;
     patSeqSet.InputTriggerType = TRIGGER_TYPE_AUTO;
-    patSeqSet.AutoTriggerPeriod = 31800;
-    patSeqSet.ExposureTime = 600;
-    patSeqSet.LEDSelect = LED_RED;
+    patSeqSet.AutoTriggerPeriod = 250;
+    patSeqSet.ExposureTime = 250;
+    patSeqSet.LEDSelect = LED_BLUE;
     patSeqSet.Repeat = 0;
     LCR_CMD_SetPatternSeqSetting(&patSeqSet);
 
-    //Load the 48 1bpp images that are generated after splitting the patterns
     printf("Downloading 48 1bpp images that are generated after splitting the patterns \n");
     printf("Downloading ./Images/CustSeqInput/SingleColor/00_PAT.bmp\n");
     LCR_CMD_DefinePatternBMP(0,"./Images/CustSeqInput/SingleColor/00_PAT.bmp");
@@ -504,4 +511,82 @@ static void flash_max_patterns() {
     LCR_CMD_StartPatternSeq(0); //Stop pattern sequence
 
     LCR_CMD_SetDisplayMode((LCR_DisplayMode_t)(0x00)); //Setting back to static display mode
+}
+
+static void display_vertical_line() {
+    //Set display mode to 0x00 - static image
+    LCR_CMD_SetDisplayMode((LCR_DisplayMode_t)(0x00));
+
+    LCR_CMD_DisplayStaticImage("./Images/test/line.bmp");
+
+    uint8 ch;
+    printf("enter 's' to stop sequence.\n");
+    while((ch = getchar()) != 's') {
+        // nothing yet.
+    }
+}
+
+static void dynamic_load_test() {
+    LCR_PatternSeqSetting_t patSeqSet;
+
+    printf("\n\nrunning flash_solid_color demo\n\n");
+
+    LCR_CMD_SetDisplayMode((LCR_DisplayMode_t)(0x04));
+
+    patSeqSet.BitDepth = 1;
+    patSeqSet.NumPatterns = 2;
+    patSeqSet.PatternType = PTN_TYPE_NORMAL;
+    patSeqSet.InputTriggerDelay = 0;
+    patSeqSet.InputTriggerType = TRIGGER_TYPE_AUTO;
+    patSeqSet.AutoTriggerPeriod = 500000;
+    patSeqSet.ExposureTime = 500000;
+    patSeqSet.LEDSelect = LED_GREEN;
+    patSeqSet.Repeat = 0;
+    LCR_CMD_SetPatternSeqSetting(&patSeqSet);
+
+    printf("Downloading pat0\n");
+    LCR_CMD_DefinePatternBMP(0,"./Images/test/white.bmp");
+
+    printf("Downloading pat1...\n");
+    LCR_CMD_DefinePatternBMP(1,"./Images/test/black.bmp");
+
+    LCR_CMD_DefinePatternBMP(2, "./Images/test/whitetop.bmp");
+    LCR_CMD_DefinePatternBMP(3, "./Images/test/whitebottom.bmp");
+
+    LCR_CMD_StartPatternSeq(1);
+
+    mSleep(5000);
+
+    clock_t begin, end;
+    double time_spent;
+
+    begin = clock();
+
+    patSeqSet.NumPatterns = 4;
+    LCR_CMD_SetPatternSeqSetting(&patSeqSet);
+    printf("Downloading pat3...\n");
+    LCR_CMD_StartPatternSeq(1);
+
+    end = clock();
+
+    time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+    printf("loading of an extra 2 frames took %f seconds\n", time_spent);
+
+    uint8 ch;
+    printf("enter 's' to stop sequence.\n");
+    while((ch = getchar()) != 's') {
+        // nothing yet.
+    }
+
+    LCR_CMD_StartPatternSeq(0); //Stop pattern sequence
+
+    LCR_CMD_SetDisplayMode((LCR_DisplayMode_t)(0x00)); //Setting back to static display mode
+}
+
+/*Function is used to create delay in mSeconds */
+/* This is used in demo code to show code flow */
+static void mSleep(unsigned long int mSeconds)
+{
+    /*Add logic and call system function that will create mSeconds millisecond delay */
+    sleep((mSeconds/1000.0));
 }
