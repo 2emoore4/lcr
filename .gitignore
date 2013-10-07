@@ -1,3 +1,5 @@
 test_patterns
 sample_app
 .DS_Store
+*.pcd
+Images
