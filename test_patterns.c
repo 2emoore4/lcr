@@ -12,6 +12,7 @@ static void flash_half_color();
 static void flash_half_color_at_speed(int speed, int exposure_time);
 static void flash_diag_pattern();
 static void scan_vertical_lines();
+static void scan_vert_seven();
 static void dynamic_load_test();
 
 /* main() function */
@@ -37,6 +38,8 @@ int main(int argc, char *argv[])
             flash_diag_pattern();
         } else if (ch == '4') {
             scan_vertical_lines();
+        } else if (ch == '5') {
+            scan_vert_seven();
         } else if (ch == '0') {
             dynamic_load_test();
         }
@@ -241,6 +244,43 @@ static void scan_vertical_lines() {
     for (i = 0; i < frame_count; i++) {
         char buf[35];
         sprintf(buf, "./Images/test/vertical/line%d.bmp", i * multiplier);
+        printf("downloading pattern %s\n", buf);
+        LCR_CMD_DefinePatternBMP(i, buf);
+    }
+
+    LCR_CMD_StartPatternSeq(1);
+
+    uint8 ch;
+    printf("enter 's' to stop sequence.\n");
+    while((ch = getchar()) != 's') {
+        // nothing yet.
+    }
+
+    LCR_CMD_StartPatternSeq(0);
+
+    LCR_CMD_SetDisplayMode((LCR_DisplayMode_t)(0x00));
+}
+
+static void scan_vert_seven() {
+    LCR_PatternSeqSetting_t patSeqSet;
+
+    LCR_CMD_SetDisplayMode((LCR_DisplayMode_t)(0x04));
+
+    patSeqSet.BitDepth = 1;
+    patSeqSet.NumPatterns = 86;
+    patSeqSet.PatternType = PTN_TYPE_NORMAL;
+    patSeqSet.InputTriggerDelay = 0;
+    patSeqSet.InputTriggerType = TRIGGER_TYPE_AUTO;
+    patSeqSet.AutoTriggerPeriod = 25000;
+    patSeqSet.ExposureTime = 25000;
+    patSeqSet.LEDSelect = LED_GREEN;
+    patSeqSet.Repeat = 0;
+    LCR_CMD_SetPatternSeqSetting(&patSeqSet);
+
+    int i;
+    for (i = 0; i < 86; i++) {
+        char buf[37];
+        sprintf(buf, "./Images/test/vert_seven/line%d.bmp", i);
         printf("downloading pattern %s\n", buf);
         LCR_CMD_DefinePatternBMP(i, buf);
     }

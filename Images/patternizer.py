@@ -46,8 +46,18 @@ def create_vertical_line_sequence():
       img.putpixel((x, y), 1)
     img.save('Images/test/vertical/line' + str(x) + '.bmp')
 
+def create_vert_seven():
+  for frame in xrange(86): # for each of 86 frames
+    img = Image.new('1', (608, 684), 'black')
+    for line in xrange(7): # for each of 7 lines
+      # draw vertical stripe at ((line * 86) + frame)
+      x = (line * 86) + frame
+      for y in xrange(img.size[1]):
+        img.putpixel((x, y), 1)
+    img.save('Images/test/vert_seven/line' + str(frame) + '.bmp')
 
 create_white_and_black()
 create_half_and_half()
 create_diagonals()
 create_vertical_line_sequence()
+create_vert_seven()
