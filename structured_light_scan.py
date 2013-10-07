@@ -11,8 +11,8 @@ max_color = 235
 
 # left_theta = 1.5708
 # right_theta = 1.01129
-left_theta = 1.6708
-right_theta = 1.11129
+left_theta = 1.3708
+right_theta = 0.81129
 frame_count = 96
 diff_per_frame = (left_theta - right_theta) / frame_count
 
