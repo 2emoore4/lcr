@@ -20,6 +20,9 @@ frame_count = 96
 image_size_x = 1280
 image_size_y = 720
 
+sub_sampling_rate = 8
+expected_x_deviation = 100
+
 def rename_files(dir_name):
 	if not os.listdir(dir_name):
 		print "directory is empty, dummy"
@@ -58,7 +61,7 @@ def scan_dir(dir_name):
 		print str(total_time / len(os.listdir(dir_name))) + " seconds per frame."
 
 def scan_video(file_name):
-	print "this method will eventually scan an mp4 file"
+	print "going to scan video file: " + file_name
 
 def scan_image(filename, scan_number, z_array):
 	print "opening file " + filename
@@ -66,9 +69,16 @@ def scan_image(filename, scan_number, z_array):
 
 	start_time = time.clock()
 
-	for y in xrange(0, scan.size[1], 8):
+	previous_line_location = -1
+	for y in xrange(0, scan.size[1], sub_sampling_rate):
 		enter_white, exit_white = 0, 0
-		for x in xrange(scan.size[0]):
+
+		if previous_line_location == -1 or previous_line_location < expected_x_deviation or previous_line_location > (image_size_x - expected_x_deviation):
+			range = xrange(scan.size[0])
+		else:
+			range = xrange(previous_line_location - expected_x_deviation, previous_line_location + expected_x_deviation)
+
+		for x in range:
 			r, g, b = scan.getpixel((x, y))
 			if is_white(r, g, b):
 				enter_white = x
@@ -81,6 +91,7 @@ def scan_image(filename, scan_number, z_array):
 
 		if enter_white != 0 and exit_white != 0:
 			mid_white = int((enter_white + exit_white) / 2)
+			previous_line_location = mid_white
 			z_array[mid_white][y] = z_triangulation(mid_white, y, scan_number)
 
 	end_time = time.clock()
