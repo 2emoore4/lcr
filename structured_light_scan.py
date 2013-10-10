@@ -61,9 +61,9 @@ def scan_dir(dir_name):
 
 		output_pcd(z_array)
 
-		end_time = time.clock
+		end_time = time.clock()
 		total_time = end_time - start_time
-		print "scan finished in " + str(total_time / 1000) + "seconds."
+		print "scan finished in " + str(total_time) + "seconds."
 
 def scan_image(filename, scan_number, z_array):
 	print "opening file " + filename
