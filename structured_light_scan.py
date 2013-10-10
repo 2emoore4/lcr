@@ -1,7 +1,6 @@
 import Image
 import math
 import os
-import threading
 import time
 
 from optparse import OptionParser
@@ -25,7 +24,7 @@ def rename_files(dir_name):
 	if not os.listdir(dir_name):
 		print "directory is empty, dummy"
 	else:
-		i = 0
+		i = 1
 		for filename in os.listdir(dir_name):
 			frame_number = str(i).zfill(3)
 			os.rename(dir_name + filename, dir_name + "scan" + frame_number + ".png")
@@ -37,10 +36,8 @@ def scan_dir(dir_name):
 	if not os.listdir(dir_name):
 		print "Directory is empty, make sure there are scans here."
 	else:
-		first_scan = Image.open(dir_name + os.listdir(dir_name)[0])
+		first_scan = Image.open(dir_name + os.listdir(dir_name)[1])
 		z_array = [[(0, 0, 0) for x in xrange(first_scan.size[1])] for x in xrange(first_scan.size[0])]
-
-		thread_list = []
 
 		print "Scanning images and creating z array..."
 		print_divider()
@@ -49,14 +46,9 @@ def scan_dir(dir_name):
 
 		scan_number = 0
 		for filename in os.listdir(dir_name):
-			t = threading.Thread(target=scan_image, args=(dir_name + filename, scan_number, z_array))
-			thread_list.append(t)
-			t.start()
-
-			scan_number += 1
-
-		for thread in thread_list:
-			thread.join()
+			if ".png" in filename:
+				scan_image(dir_name + filename, scan_number, z_array)
+				scan_number += 1
 
 		output_pcd(z_array)
 
@@ -65,11 +57,16 @@ def scan_dir(dir_name):
 		print "scan finished in " + str(total_time) + " seconds."
 		print str(total_time / len(os.listdir(dir_name))) + " seconds per frame."
 
+def scan_video(file_name):
+	print "this method will eventually scan an mp4 file"
+
 def scan_image(filename, scan_number, z_array):
 	print "opening file " + filename
 	scan = Image.open(filename)
 
-	for y in xrange(scan.size[1]):
+	start_time = time.clock()
+
+	for y in xrange(0, scan.size[1], 8):
 		enter_white, exit_white = 0, 0
 		for x in xrange(scan.size[0]):
 			r, g, b = scan.getpixel((x, y))
@@ -85,6 +82,10 @@ def scan_image(filename, scan_number, z_array):
 		if enter_white != 0 and exit_white != 0:
 			mid_white = int((enter_white + exit_white) / 2)
 			z_array[mid_white][y] = z_triangulation(mid_white, y, scan_number)
+
+	end_time = time.clock()
+	total_time = end_time - start_time
+	print "scanned image in " + str(total_time) + " seconds"
 
 def z_triangulation(x, y, scan_number):
 	y = image_size_y - y
@@ -161,12 +162,13 @@ def main():
 	parser.add_option("-r", action="store_true", dest="rename")
 	parser.add_option("-s", action="store_true", dest="scan")
 	parser.add_option("-d", "--dir", dest="dir_name")
+	parser.add_option("-f", "--file", dest="file_name")
 
 	(options, args) = parser.parse_args()
 
-	if not options.dir_name:
+	if not options.dir_name or options.file_name:
 		print "Need to specify directory with -d option"
-	else:
+	elif options.dir_name:
 		fixed_dir = fix_dir_name(options.dir_name)
 		clean_dir(fixed_dir)
 
@@ -175,6 +177,9 @@ def main():
 
 		if options.scan:
 			scan_dir(fixed_dir)
+	elif options.file_name:
+		if options.scan:
+			scan_video(options.file_name)
 
 if __name__ == "__main__":
 	main()
