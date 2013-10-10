@@ -22,25 +22,14 @@ image_size_x = 1280
 image_size_y = 720
 
 def rename_files(dir_name):
-	""" This was an elaborate plan to rename image files.
-
-	It was intended to be used to rename n images to
-	"scan000, scan001, ... , scan[n-1]" but then I realized I
-	didn't need to do this at all, so I didn't even finish
-	writing the function. But I'll leave it in here in case I
-	need it at some point and want to finish it."""
-
-	# if not dir_name.endswith("/"):
-	# 	dir_name = dir_name + "/"
-
-	# if not os.listdir(dir_name):
-	# 	print "directory is empty, dummy"
-	# else:
-	# 	os.mkdir(dir_name + "tmp")
-	# 	for filename in os.listdir(dir_name):
-	# 		os.rename(filename, "tmp/" + filename)
-
-	print "You've selected the rename flag. It does nothing."
+	if not os.listdir(dir_name):
+		print "directory is empty, dummy"
+	else:
+		i = 0
+		for filename in os.listdir(dir_name):
+			frame_number = str(i).zfill(3)
+			os.rename(dir_name + filename, dir_name + "scan" + frame_number + ".png")
+			i += 1
 
 def scan_dir(dir_name):
 	print "Processing scans in directory: " + dir_name
@@ -73,7 +62,7 @@ def scan_dir(dir_name):
 
 		end_time = time.clock()
 		total_time = end_time - start_time
-		print "scan finished in " + str(total_time) + "seconds."
+		print "scan finished in " + str(total_time) + " seconds."
 		print str(total_time / len(os.listdir(dir_name))) + " seconds per frame."
 
 def scan_image(filename, scan_number, z_array):
