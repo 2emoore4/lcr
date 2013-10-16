@@ -2,6 +2,7 @@ import Image
 import math
 import os
 import time
+import threading
 
 from optparse import OptionParser
 
@@ -42,6 +43,8 @@ def scan_dir(dir_name):
 		first_scan = Image.open(dir_name + os.listdir(dir_name)[1])
 		z_array = [[(0, 0, 0) for x in xrange(first_scan.size[1])] for x in xrange(first_scan.size[0])]
 
+		thread_list = []
+
 		print "Scanning images and creating z array..."
 		print_divider()
 
@@ -50,8 +53,15 @@ def scan_dir(dir_name):
 		scan_number = 0
 		for filename in sorted(os.listdir(dir_name)):
 			if ".png" in filename:
-				scan_image(dir_name + filename, scan_number, z_array)
+				# scan_image(dir_name + filename, scan_number, z_array)
+				t = threading.Thread(target=scan_image, args=(dir_name + filename, scan_number, z_array))
+				thread_list.append(t)
+				t.start()
+
 				scan_number += 1
+
+		for thread in thread_list:
+			thread.join()
 
 		output_pcd(z_array)
 
