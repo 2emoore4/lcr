@@ -48,7 +48,7 @@ def scan_dir(dir_name):
 		start_time = time.clock()
 
 		scan_number = 0
-		for filename in os.listdir(dir_name):
+		for filename in sorted(os.listdir(dir_name)):
 			if ".png" in filename:
 				scan_image(dir_name + filename, scan_number, z_array)
 				scan_number += 1
