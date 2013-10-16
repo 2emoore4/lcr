@@ -92,7 +92,7 @@ def scan_image(filename, scan_number, z_array):
 		if enter_white != 0 and exit_white != 0:
 			mid_white = int((enter_white + exit_white) / 2)
 			previous_line_location = mid_white
-			z_array[mid_white][y] = z_triangulation(mid_white, y, scan_number)
+			z_array[mid_white][y] = (x, image_size_y - y, z_triangulation(mid_white, y, scan_number))
 
 	end_time = time.clock()
 	total_time = end_time - start_time
@@ -103,14 +103,7 @@ def z_triangulation(x, y, scan_number):
 	theta = translate(scan_number, 0, frame_count - 1, left_theta, right_theta)
 	alpha = translate(scan_number, 0, frame_count - 1, left_alpha, right_alpha)
 	z = b * (math.sin(theta) / math.sin(alpha + theta))
-	return x, y, z * (-f)
-
-
-def red_blue_for_z(z, min_z, max_z):
-	red = translate(z, min_z, max_z, min_color, max_color)
-	blue = translate(z, min_z, max_z, max_color, min_color)
-
-	return red, blue
+	return z * (-f)
 
 def translate(value, leftMin, leftMax, rightMin, rightMax):
     leftSpan = leftMax - leftMin
