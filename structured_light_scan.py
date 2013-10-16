@@ -8,9 +8,6 @@ from optparse import OptionParser
 b = 72 # baseline distance
 f = 22 # focal length
 
-min_color = 20
-max_color = 235
-
 left_theta = 1.5708
 right_theta = 1.01129
 left_alpha = 0.23022
@@ -157,10 +154,6 @@ def fix_dir_name(dir_name):
 	else:
 		return dir_name + "/"
 
-def clean_dir(dir_name):
-	if ".DS_Store" in os.listdir(dir_name):
-		os.remove(dir_name + ".DS_Store")
-
 def main():
 	parser = OptionParser()
 	parser.add_option("-r", action="store_true", dest="rename")
@@ -174,7 +167,6 @@ def main():
 		print "Need to specify directory with -d option"
 	elif options.dir_name:
 		fixed_dir = fix_dir_name(options.dir_name)
-		clean_dir(fixed_dir)
 
 		if options.rename:
 			rename_files(fixed_dir)
