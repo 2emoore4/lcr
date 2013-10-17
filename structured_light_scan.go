@@ -139,9 +139,9 @@ func angle_for_frame(frame_number int) float64 {
 func is_white(r uint32, g uint32, b uint32) bool {
 	if r == 255 && g == 255 && b == 255 {
 		return true
-	} else {
-		return false
 	}
+
+	return false
 }
 
 func print_divider() {
@@ -151,9 +151,9 @@ func print_divider() {
 func fix_dir_name(dir_name string) string {
 	if strings.HasSuffix(dir_name, "/") {
 		return dir_name
-	} else {
-		return dir_name + "/"
 	}
+
+	return dir_name + "/"
 }
 
 func main() {
