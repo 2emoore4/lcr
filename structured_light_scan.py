@@ -89,7 +89,7 @@ def scan_image(filename, scan_number, z_array):
 		if enter_white != 0 and exit_white != 0:
 			mid_white = int((enter_white + exit_white) / 2)
 			previous_line_location = mid_white
-			z_array[mid_white][y] = (x, image_size_y - y, z_triangulation(mid_white, y, scan_number))
+			z_array[mid_white][y] = (mid_white, image_size_y - y, z_triangulation(mid_white, y, scan_number))
 
 	end_time = time.clock()
 	total_time = end_time - start_time
