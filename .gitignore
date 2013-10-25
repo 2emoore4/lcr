@@ -3,3 +3,4 @@ sample_app
 .DS_Store
 *.pcd
 Images
+*.out

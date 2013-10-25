@@ -135,10 +135,6 @@ def output_pcd(z_array):
 		x, y, z = point
 		pcd_file.write(str(x) + " " + str(y) + " " + str(z) + "\n")
 
-
-def angle_for_frame(frame_number):
-	return translate(frame_number, 0, frame_count - 1, left_theta, right_theta)
-
 def is_white(r, g, b):
 	if r == 255 and g == 255 and b == 255:
 		return True

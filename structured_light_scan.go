@@ -14,16 +14,7 @@ var b, f int = 72, 22
 var left_theta, right_theta, left_alpha, right_alpha float64 = 1.5708, 1.01129, 0.23022, 0.33389
 var frame_count int = 96
 var image_size_x, image_size_y = 1280, 720
-var sub_sampling_rate, expected_x_deviation = 8, 100
-
-func rename_files(dir_name string) {
-	var files, _ = ioutil.ReadDir(dir_name)
-	if len(files) == 0 {
-		fmt.Println("directory is empty, dummy")
-	} else {
-		// rename the files. won't need this for now.
-	}
-}
+var sub_sampling_rate, expected_x_deviation = 1, 100
 
 func scan_dir(dir_name string) {
 	fmt.Println("Processing scans in directory: " + dir_name)
@@ -53,7 +44,7 @@ func scan_dir(dir_name string) {
 		for i := 0; i < len(files); i++ {
 			filename := files[i]
 			if strings.Contains(filename.Name(), "png") {
-				scan_image(dir_name + filename.Name(), scan_number, z_array)
+				scan_image_by_dev(dir_name + filename.Name(), scan_number, z_array)
 				scan_number++
 			}
 		}
@@ -70,7 +61,7 @@ func scan_video(filename string) {
 }
 
 func scan_image(filename string, scan_number int, z_array [][]float64) {
-	fmt.Println("Opening file " + filename)
+	fmt.Println("Opening file " + filename + ". scan number " + strconv.Itoa(scan_number))
 
 	file, err := os.Open(filename)
 	if err != nil { panic(err) }
@@ -126,6 +117,55 @@ func z_triangulation(x int, y int, scan_number int) float64 {
 	return z * (-float64(f))
 }
 
+func scan_image_by_dev(filename string, scan_number int, z_array [][]float64) {
+	fmt.Println("Opening file " + filename + ". scan number " + strconv.Itoa(scan_number))
+
+	file, err := os.Open(filename)
+	if err != nil { panic(err) }
+	r := bufio.NewReader(file)
+	scan_image, err := png.Decode(r)
+
+	start_time := time.Now()
+
+	first_line_location := -1
+	for y := 0; y < image_size_y; y += sub_sampling_rate {
+		enter_white, exit_white := 0, 0
+
+		for x := 0; x < image_size_x; x++ {
+			color := scan_image.At(x, y)
+			r, g, b, _ := color.RGBA()
+			if is_white(r, g, b) {
+				enter_white = x
+				break
+			}
+		}
+
+		for x := enter_white; x < image_size_x; x++ {
+			color := scan_image.At(x, y)
+			r, g, b, _ := color.RGBA()
+			if !is_white(r, g, b) {
+				exit_white = x - 1
+				break
+			}
+		}
+
+		if enter_white != 0 && exit_white != 0 {
+			mid_white := int((enter_white + exit_white) / 2)
+
+			if first_line_location == -1 {
+				z_array[mid_white][y] = 10
+				first_line_location = mid_white
+			} else {
+				x_diff := first_line_location - mid_white
+				z_array[mid_white][y] = float64(x_diff + 10)
+			}
+		}
+	}
+
+	time_elapsed := time.Since(start_time)
+	fmt.Println("scanned image in " + time_elapsed.String())
+}
+
 func translate(value float64, left_min float64, left_max float64, right_min float64, right_max float64) float64 {
 	var left_span float64 = left_max - left_min
 	var right_span float64 = right_max - right_min
@@ -170,10 +210,6 @@ func output_pcd(z_array [][]float64) {
 	out_file.Close()
 }
 
-func angle_for_frame(frame_number int) float64 {
-	return 0.0
-}
-
 func is_white(r uint32, g uint32, b uint32) bool {
 	if r == 65535 && g == 65535 && b == 65535 {
 		return true
@@ -195,5 +231,6 @@ func fix_dir_name(dir_name string) string {
 }
 
 func main() {
-	scan_dir("/Volumes/theoc/evan/Google Drive/scan_lines/")
+	// scan_dir("/Volumes/C300/Users/evan/Workspaces/one_scan_line/")
+	scan_dir("/Volumes/C300/Users/evan/Workspaces/scan_lines/")
 }
