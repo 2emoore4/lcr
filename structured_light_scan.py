@@ -37,7 +37,7 @@ def scan_dir(dir_name):
 		print "Directory is empty, make sure there are scans here."
 	else:
 		first_scan = Image.open(dir_name + os.listdir(dir_name)[1])
-		z_array = [[(0, 0, 0) for x in xrange(first_scan.size[1])] for x in xrange(first_scan.size[0])]
+		z_array = [[0 for x in xrange(first_scan.size[1])] for x in xrange(first_scan.size[0])]
 
 		print "Scanning images and creating z array..."
 		print_divider()
@@ -47,7 +47,7 @@ def scan_dir(dir_name):
 		scan_number = 0
 		for filename in sorted(os.listdir(dir_name)):
 			if ".png" in filename:
-				scan_image(dir_name + filename, scan_number, z_array)
+				scan_image_by_dev(dir_name + filename, scan_number, z_array)
 				scan_number += 1
 
 		output_pcd(z_array)
@@ -89,7 +89,43 @@ def scan_image(filename, scan_number, z_array):
 		if enter_white != 0 and exit_white != 0:
 			mid_white = int((enter_white + exit_white) / 2)
 			previous_line_location = mid_white
-			z_array[mid_white][y] = (mid_white, image_size_y - y, z_triangulation(mid_white, y, scan_number))
+			z_array[mid_white][y] = z_triangulation(mid_white, y, scan_number)
+
+	end_time = time.clock()
+	total_time = end_time - start_time
+	print "scanned image in " + str(total_time) + " seconds"
+
+def scan_image_by_dev(filename, scan_number, z_array):
+	print "opening file " + filename
+	scan = Image.open(filename)
+
+	start_time = time.clock()
+
+	first_line_location = -1
+	for y in xrange(0, image_size_y, sub_sampling_rate):
+		enter_white, exit_white = 0, 0
+
+		for x in xrange(image_size_x):
+			r, g, b = scan.getpixel((x, y))
+			if is_white(r, g, b):
+				enter_white = x
+				break
+
+		for x in xrange(enter_white, image_size_x):
+			r, g, b = scan.getpixel((x, y))
+			if not is_white(r, g, b):
+				exit_white = x - 1
+				break
+
+		if enter_white != 0 and exit_white != 0:
+			mid_white = int((enter_white + exit_white) / 2)
+
+			if first_line_location == -1:
+				z_array[mid_white][y] = float(10)
+				first_line_location = mid_white
+			else:
+				xdiff = first_line_location - mid_white
+				z_array[mid_white][y] = float(xdiff + 10)
 
 	end_time = time.clock()
 	total_time = end_time - start_time
@@ -115,7 +151,7 @@ def output_pcd(z_array):
 	for u in xrange(len(z_array)):
 		for v in xrange(len(z_array[0])):
 			point = z_array[u][v]
-			if (point != (0, 0, 0)):
+			if (point != 0):
 				z_list.append(point)
 
 	pcd_file = open("output.pcd", "w")
@@ -131,9 +167,10 @@ def output_pcd(z_array):
 	pcd_file.write("POINTS " + str(len(z_list)) + "\n")
 	pcd_file.write("DATA ascii\n")
 
-	for point in z_list:
-		x, y, z = point
-		pcd_file.write(str(x) + " " + str(y) + " " + str(z) + "\n")
+	for x in xrange(len(z_array)):
+		for y in xrange(len(z_array[0])):
+			if z_array[x][y] != 0:
+				pcd_file.write(str(x) + " " + str(image_size_y - y) + " " + str(z_array[x][y]) + "\n")
 
 def is_white(r, g, b):
 	if r == 255 and g == 255 and b == 255:
