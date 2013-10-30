@@ -30,12 +30,17 @@ def rename_files(dir_name):
 			os.rename(dir_name + filename, dir_name + "scan" + frame_number + ".png")
 			i += 1
 
-def scan_dir(dir_name):
+def scan_dir(dir_name, calibration_dir = None):
 	print "Processing scans in directory: " + dir_name
 	print_divider()
 	if not os.listdir(dir_name):
 		print "Directory is empty, make sure there are scans here."
 	else:
+		if calibration_dir:
+			cal_array = calibrate_from_dir(calibration_dir)
+		else:
+			cal_array = None
+
 		first_scan = Image.open(dir_name + os.listdir(dir_name)[1])
 		z_array = [[-99999 for x in xrange(first_scan.size[1])] for x in xrange(first_scan.size[0])]
 
@@ -47,7 +52,7 @@ def scan_dir(dir_name):
 		scan_number = 0
 		for filename in sorted(os.listdir(dir_name)):
 			if ".png" in filename:
-				scan_image_by_dev(dir_name + filename, scan_number, z_array)
+				scan_image_by_dev(dir_name + filename, scan_number, z_array, cal_array)
 				scan_number += 1
 
 		output_pcd(z_array)
@@ -57,45 +62,79 @@ def scan_dir(dir_name):
 		print "scan finished in " + str(total_time) + " seconds."
 		print str(total_time / len(os.listdir(dir_name))) + " seconds per frame."
 
+def calibrate_from_dir(dir_name):
+	print "Calibrating scaner with frames in directory: " + dir_name
+	print_divider()
+	if not os.listdir(dir_name):
+		print "Calibration directory is empty, make sure there are scans here."
+	else:
+		first_scan = Image.open(dir_name + os.listdir(dir_name)[1])
+		cal_array = [[-99999 for x in xrange(first_scan.size[1])] for x in xrange(len(os.listdir(dir_name)))]
+
+		print "Scanning images and creating calibration array..."
+		print_divider()
+
+		scan_number = 0
+		for filename in sorted(os.listdir(dir_name)):
+			if ".png" in filename:
+				calibrate_with_image(dir_name + filename, scan_number, cal_array)
+				scan_number += 1
+
+		print "Finished calibration."
+		print_divider
+
+		return cal_array
+
+def find_projection_in_line(scan, y_pix):
+	enter_white, exit_white = 0, 0
+
+	for x in xrange(image_size_x):
+		r, g, b = scan.getpixel((x, y_pix))
+		if is_white(r, g, b):
+			enter_white = x
+			break
+
+	for x in xrange(enter_white, image_size_x):
+		r, g, b = scan.getpixel((x, y_pix))
+		if not is_white(r, g, b):
+			exit_white = x - 1
+			break
+
+	if enter_white != 0 and exit_white != 0:
+		return int((enter_white + exit_white) / 2)
+	else:
+		return -99999
+
+
+def calibrate_with_image(filename, scan_number, cal_array):
+	print "Opening file " + filename
+	scan = Image.open(filename)
+
+	for y in xrange(scan.size[1]):
+		line_location = find_projection_in_line(scan, y)
+		if line_location != -99999:
+			cal_array[scan_number][y] = line_location
+
+
 def scan_video(file_name):
 	print "going to scan video file: " + file_name
 
-def scan_image(filename, scan_number, z_array):
+def scan_image_with_parallax(filename, scan_number, z_array):
 	print "opening file " + filename
 	scan = Image.open(filename)
 
 	start_time = time.clock()
 
-	previous_line_location = -1
 	for y in xrange(0, scan.size[1], sub_sampling_rate):
-		enter_white, exit_white = 0, 0
-
-		if previous_line_location == -1 or previous_line_location < expected_x_deviation or previous_line_location > (image_size_x - expected_x_deviation):
-			range = xrange(scan.size[0])
-		else:
-			range = xrange(previous_line_location - expected_x_deviation, previous_line_location + expected_x_deviation)
-
-		for x in range:
-			r, g, b = scan.getpixel((x, y))
-			if is_white(r, g, b):
-				enter_white = x
-				break
-		for x in xrange(enter_white, scan.size[0]):
-			r, g, b = scan.getpixel((x, y))
-			if not is_white(r, g, b):
-				exit_white = x - 1
-				break
-
-		if enter_white != 0 and exit_white != 0:
-			mid_white = int((enter_white + exit_white) / 2)
-			previous_line_location = mid_white
-			z_array[mid_white][y] = z_triangulation(mid_white, y, scan_number)
+		line_location = find_projection_in_line(scan, y)
+		if line_location != -99999:
+			z_array[line_location][y] = z_triangulation(line_location, y, scan_number)
 
 	end_time = time.clock()
 	total_time = end_time - start_time
 	print "scanned image in " + str(total_time) + " seconds"
 
-def scan_image_by_dev(filename, scan_number, z_array):
+def scan_image_by_dev(filename, scan_number, z_array, calibration_array = None):
 	print "opening file " + filename
 	scan = Image.open(filename)
 
@@ -103,29 +142,20 @@ def scan_image_by_dev(filename, scan_number, z_array):
 
 	first_line_location = -1
 	for y in xrange(0, image_size_y, sub_sampling_rate):
-		enter_white, exit_white = 0, 0
-
-		for x in xrange(image_size_x):
-			r, g, b = scan.getpixel((x, y))
-			if is_white(r, g, b):
-				enter_white = x
-				break
-
-		for x in xrange(enter_white, image_size_x):
-			r, g, b = scan.getpixel((x, y))
-			if not is_white(r, g, b):
-				exit_white = x - 1
-				break
-
-		if enter_white != 0 and exit_white != 0:
-			mid_white = int((enter_white + exit_white) / 2)
-
-			if first_line_location == -1:
-				z_array[mid_white][y] = float(0)
-				first_line_location = mid_white
+		line_location = find_projection_in_line(scan, y)
+		if line_location != -99999:
+			if calibration_array:
+				expected_location = calibration_array[scan_number][y]
+				if expected_location != -99999:
+					xdiff = line_location - expected_location
+					z_array[line_location][y] = float(xdiff)
 			else:
-				xdiff = mid_white - first_line_location
-				z_array[mid_white][y] = float(xdiff)
+				if first_line_location == -1:
+					z_array[line_location][y] = float(0)
+					first_line_location = line_location
+				else:
+					xdiff = line_location - first_line_location
+					z_array[line_location][y] = float(xdiff)
 
 	end_time = time.clock()
 	total_time = end_time - start_time
@@ -193,6 +223,7 @@ def main():
 	parser.add_option("-s", action="store_true", dest="scan")
 	parser.add_option("-d", "--dir", dest="dir_name")
 	parser.add_option("-f", "--file", dest="file_name")
+	parser.add_option("-c", "--cal-dir", dest="cal_dir")
 
 	(options, args) = parser.parse_args()
 
@@ -205,7 +236,10 @@ def main():
 			rename_files(fixed_dir)
 
 		if options.scan:
-			scan_dir(fixed_dir)
+			if options.cal_dir:
+				scan_dir(fixed_dir, options.cal_dir)
+			else:
+				scan_dir(fixed_dir)
 	elif options.file_name:
 		if options.scan:
 			scan_video(options.file_name)
