@@ -14,8 +14,8 @@ left_alpha = 0.23022
 right_alpha = 0.33389
 frame_count = 96
 
-image_size_x = 1280
-image_size_y = 720
+image_size_x = 640
+image_size_y = 480
 
 sub_sampling_rate = 8
 expected_x_deviation = 100
@@ -37,7 +37,7 @@ def scan_dir(dir_name):
 		print "Directory is empty, make sure there are scans here."
 	else:
 		first_scan = Image.open(dir_name + os.listdir(dir_name)[1])
-		z_array = [[0 for x in xrange(first_scan.size[1])] for x in xrange(first_scan.size[0])]
+		z_array = [[-99999 for x in xrange(first_scan.size[1])] for x in xrange(first_scan.size[0])]
 
 		print "Scanning images and creating z array..."
 		print_divider()
@@ -121,11 +121,11 @@ def scan_image_by_dev(filename, scan_number, z_array):
 			mid_white = int((enter_white + exit_white) / 2)
 
 			if first_line_location == -1:
-				z_array[mid_white][y] = float(10)
+				z_array[mid_white][y] = float(0)
 				first_line_location = mid_white
 			else:
-				xdiff = first_line_location - mid_white
-				z_array[mid_white][y] = float(xdiff + 10)
+				xdiff = mid_white - first_line_location
+				z_array[mid_white][y] = float(xdiff)
 
 	end_time = time.clock()
 	total_time = end_time - start_time
@@ -151,7 +151,7 @@ def output_pcd(z_array):
 	for u in xrange(len(z_array)):
 		for v in xrange(len(z_array[0])):
 			point = z_array[u][v]
-			if (point != 0):
+			if (point != -99999):
 				z_list.append(point)
 
 	pcd_file = open("output.pcd", "w")
@@ -169,7 +169,7 @@ def output_pcd(z_array):
 
 	for x in xrange(len(z_array)):
 		for y in xrange(len(z_array[0])):
-			if z_array[x][y] != 0:
+			if z_array[x][y] != -99999:
 				pcd_file.write(str(x) + " " + str(image_size_y - y) + " " + str(z_array[x][y]) + "\n")
 
 def is_white(r, g, b):
