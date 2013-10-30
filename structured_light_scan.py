@@ -17,7 +17,7 @@ frame_count = 96
 image_size_x = 640
 image_size_y = 480
 
-sub_sampling_rate = 8
+sub_sampling_rate = 4
 expected_x_deviation = 100
 
 def rename_files(dir_name):
