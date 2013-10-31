@@ -17,7 +17,7 @@ frame_count = 96
 image_size_x = 640
 image_size_y = 480
 
-sub_sampling_rate = 4
+sub_sampling_rate = 8
 expected_x_deviation = 100
 
 def rename_files(dir_name):
@@ -85,10 +85,15 @@ def calibrate_from_dir(dir_name):
 
 		return cal_array
 
-def find_projection_in_line(scan, y_pix):
+def find_projection_in_line(scan, y_pix, est_location = -1):
 	enter_white, exit_white = 0, 0
 
-	for x in xrange(image_size_x):
+	if est_location == -1 or est_location < expected_x_deviation or est_location > (image_size_x - expected_x_deviation):
+		range = xrange(image_size_x)
+	else:
+		range = xrange(est_location - expected_x_deviation, est_location + expected_x_deviation)
+
+	for x in range:
 		r, g, b = scan.getpixel((x, y_pix))
 		if is_white(r, g, b):
 			enter_white = x
@@ -141,9 +146,11 @@ def scan_image_by_dev(filename, scan_number, z_array, calibration_array = None):
 	start_time = time.clock()
 
 	first_line_location = -1
+	previous_line_location = -1
 	for y in xrange(0, image_size_y, sub_sampling_rate):
-		line_location = find_projection_in_line(scan, y)
+		line_location = find_projection_in_line(scan, y, previous_line_location)
 		if line_location != -99999:
+			previous_line_location = line_location
 			if calibration_array:
 				expected_location = calibration_array[scan_number][y]
 				if expected_location != -99999:
@@ -203,7 +210,7 @@ def output_pcd(z_array):
 				pcd_file.write(str(x) + " " + str(image_size_y - y) + " " + str(z_array[x][y]) + "\n")
 
 def is_white(r, g, b):
-	if r == 255 and g == 255 and b == 255:
+	if r > 220 and g > 220 and b > 220:
 		return True
 	else:
 		return False

@@ -227,7 +227,7 @@ static void scan_vertical_lines() {
 
     int frame_count = 96;
     int multiplier = 608 / frame_count;
-    int frame_duration = 2500;
+    int frame_duration = 250000;
 
     patSeqSet.BitDepth = 1;
     patSeqSet.NumPatterns = frame_count;
