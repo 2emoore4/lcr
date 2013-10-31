@@ -19,6 +19,7 @@ image_size_y = 480
 
 sub_sampling_rate = 8
 expected_x_deviation = 100
+maximum_line_size = 15
 
 def rename_files(dir_name):
 	if not os.listdir(dir_name):
@@ -105,7 +106,7 @@ def find_projection_in_line(scan, y_pix, est_location = -1):
 			exit_white = x - 1
 			break
 
-	if enter_white != 0 and exit_white != 0:
+	if enter_white != 0 and exit_white != 0 and (exit_white - enter_white) < maximum_line_size:
 		return int((enter_white + exit_white) / 2)
 	else:
 		return -99999
@@ -115,9 +116,11 @@ def calibrate_with_image(filename, scan_number, cal_array):
 	print "Opening file " + filename
 	scan = Image.open(filename)
 
+	previous_line_location = -1
 	for y in xrange(scan.size[1]):
-		line_location = find_projection_in_line(scan, y)
+		line_location = find_projection_in_line(scan, y, previous_line_location)
 		if line_location != -99999:
+			previous_line_location = line_location
 			cal_array[scan_number][y] = line_location
 
 
