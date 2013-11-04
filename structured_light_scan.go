@@ -16,7 +16,7 @@ var b, f int = 72, 22
 var left_theta, right_theta, left_alpha, right_alpha float64 = 1.5708, 1.01129, 0.23022, 0.33389
 var frame_count int = 96
 var image_size_x, image_size_y = 640, 480
-var sub_sampling_rate, expected_x_deviation = 8, 100
+var sub_sampling_rate, expected_x_deviation, maximum_line_size = 8, 100, 15
 
 func scan_dir(dir_name string, calibration_dir string) {
 	fmt.Println("Processing scans in directory: " + dir_name)
@@ -132,7 +132,7 @@ func find_projection_in_line(scan image.Image, y_pix int, est_location int) int 
 		}
 	}
 
-	if enter_white != 0 && exit_white != 0 {
+	if enter_white != 0 && exit_white != 0 && (exit_white - enter_white) < maximum_line_size {
 		return int((enter_white + exit_white) / 2)
 	}
 
@@ -147,9 +147,11 @@ func calibrate_with_image(filename string, scan_number int, cal_array [][]int) {
 	r := bufio.NewReader(file)
 	scan, err := png.Decode(r)
 
+	previous_line_location := -1
 	for y := 0; y < image_size_y; y++ {
-		line_location := find_projection_in_line(scan, y, -1)
+		line_location := find_projection_in_line(scan, y, previous_line_location)
 		if line_location != -99999 {
+			previous_line_location = line_location
 			cal_array[scan_number][y] = line_location
 		}
 	}
