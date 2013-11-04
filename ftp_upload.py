@@ -1,5 +1,6 @@
 from ftplib import FTP
 from getpass import getpass
+from shutil import copy2
 
 import os
 import time
@@ -14,6 +15,9 @@ def rename_pcd():
   os.rename(original_filename, new_filename)
   return new_filename
 
+def copy_file(filename):
+  copy2(filename, "/srv/pcd/" + filename)
+
 def send_file(filename):
   ftppass = getpass()
   ftp = FTP("evanmoore.no-ip.org")
@@ -26,7 +30,9 @@ def send_file(filename):
   os.remove(filename)
 
 if pcd_exists():
-  send_file(rename_pcd())
+  new_name = rename_pcd()
+  copy_file(new_name)
+  send_file(new_name)
 else:
   print "no pcd file exists in this directory"
 
