@@ -104,10 +104,17 @@ func calibrate_from_dir(dir_name string) [][]int {
 	return nil
 }
 
-func find_projection_in_line(scan image.Image, y_pix int) int {
+func find_projection_in_line(scan image.Image, y_pix int, est_location int) int {
 	enter_white, exit_white := 0, 0
+	var min_x, max_x int
 
-	for x := 0; x < image_size_x; x++ {
+	if est_location == -1 || est_location < expected_x_deviation || est_location > (image_size_x - expected_x_deviation) {
+		min_x, max_x = 0, image_size_x
+	} else {
+		min_x, max_x = est_location - expected_x_deviation, est_location + expected_x_deviation
+	}
+
+	for x := min_x; x < max_x; x++ {
 		color := scan.At(x, y_pix)
 		r, g, b, _ := color.RGBA()
 		if is_white(r, g, b) {
@@ -116,7 +123,7 @@ func find_projection_in_line(scan image.Image, y_pix int) int {
 		}
 	}
 
-	for x := enter_white; x < image_size_x; x++ {
+	for x := enter_white; x < max_x; x++ {
 		color := scan.At(x, y_pix)
 		r, g, b, _ := color.RGBA()
 		if !is_white(r, g, b) {
@@ -141,7 +148,7 @@ func calibrate_with_image(filename string, scan_number int, cal_array [][]int) {
 	scan, err := png.Decode(r)
 
 	for y := 0; y < image_size_y; y++ {
-		line_location := find_projection_in_line(scan, y)
+		line_location := find_projection_in_line(scan, y, -1)
 		if line_location != -99999 {
 			cal_array[scan_number][y] = line_location
 		}
@@ -163,7 +170,7 @@ func scan_image_with_parallax(filename string, scan_number int, z_array [][]floa
 	start_time := time.Now()
 
 	for y := 0; y < image_size_y; y += sub_sampling_rate {
-		line_location := find_projection_in_line(scan, y)
+		line_location := find_projection_in_line(scan, y, -1)
 		if line_location != -99999 {
 			z_array[line_location][y] = z_triangulation(line_location, y, scan_number)
 		}
@@ -192,9 +199,11 @@ func scan_image_by_dev(filename string, scan_number int, z_array [][]float64, ca
 	start_time := time.Now()
 
 	first_line_location := -1
+	previous_line_location := -1
 	for y := 0; y < image_size_y; y += sub_sampling_rate {
-		line_location := find_projection_in_line(scan, y)
+		line_location := find_projection_in_line(scan, y, previous_line_location)
 		if line_location != -99999 {
+			previous_line_location = line_location
 			if cal_array != nil {
 				expected_location := cal_array[scan_number][y]
 				if expected_location != -99999 {
