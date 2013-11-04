@@ -14,7 +14,7 @@ import "time"
 var b, f int = 72, 22
 var left_theta, right_theta, left_alpha, right_alpha float64 = 1.5708, 1.01129, 0.23022, 0.33389
 var frame_count int = 96
-var image_size_x, image_size_y = 1280, 720
+var image_size_x, image_size_y = 640, 480
 var sub_sampling_rate, expected_x_deviation = 8, 100
 
 func scan_dir(dir_name string) {
@@ -32,7 +32,7 @@ func scan_dir(dir_name string) {
 
 		for x := 0; x < image_size_x; x++ {
 			for y := 0; y < image_size_y; y++ {
-				z_array[x][y] = 0
+				z_array[x][y] = -99999
 			}
 		}
 
@@ -155,11 +155,11 @@ func scan_image_by_dev(filename string, scan_number int, z_array [][]float64) {
 			mid_white := int((enter_white + exit_white) / 2)
 
 			if first_line_location == -1 {
-				z_array[mid_white][y] = 10
+				z_array[mid_white][y] = 0
 				first_line_location = mid_white
 			} else {
 				x_diff := mid_white - first_line_location
-				z_array[mid_white][y] = float64(x_diff + 10)
+				z_array[mid_white][y] = float64(x_diff)
 			}
 		}
 	}
@@ -181,7 +181,7 @@ func output_pcd(z_array [][]float64) {
 	point_count := 0
 	for x := 0; x < image_size_x; x++ {
 		for y := 0; y < image_size_y; y++ {
-			if (z_array[x][y] != 0) {
+			if (z_array[x][y] != -99999) {
 				point_count++
 			}
 		}
@@ -201,7 +201,7 @@ func output_pcd(z_array [][]float64) {
 
 	for x := 0; x < image_size_x; x++ {
 		for y := 0; y < image_size_y; y++ {
-			if (z_array[x][y] != 0) {
+			if (z_array[x][y] != -99999) {
 				pcd_string += strconv.Itoa(x) + " " + strconv.Itoa(image_size_y - y) + " " + strconv.FormatFloat(z_array[x][y], 'f', -1, 64) + "\n"
 			}
 		}
