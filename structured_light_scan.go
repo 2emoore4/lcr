@@ -1,6 +1,7 @@
 package main
 
 import "bufio"
+import "flag"
 import "fmt"
 import "image/png"
 import "io/ioutil"
@@ -14,7 +15,7 @@ var b, f int = 72, 22
 var left_theta, right_theta, left_alpha, right_alpha float64 = 1.5708, 1.01129, 0.23022, 0.33389
 var frame_count int = 96
 var image_size_x, image_size_y = 1280, 720
-var sub_sampling_rate, expected_x_deviation = 1, 100
+var sub_sampling_rate, expected_x_deviation = 8, 100
 
 func scan_dir(dir_name string) {
 	fmt.Println("Processing scans in directory: " + dir_name)
@@ -45,6 +46,7 @@ func scan_dir(dir_name string) {
 			filename := files[i]
 			if strings.Contains(filename.Name(), "png") {
 				scan_image_by_dev(dir_name + filename.Name(), scan_number, z_array)
+				fmt.Println("scanning image " + filename.Name())
 				scan_number++
 			}
 		}
@@ -156,7 +158,7 @@ func scan_image_by_dev(filename string, scan_number int, z_array [][]float64) {
 				z_array[mid_white][y] = 10
 				first_line_location = mid_white
 			} else {
-				x_diff := first_line_location - mid_white
+				x_diff := mid_white - first_line_location
 				z_array[mid_white][y] = float64(x_diff + 10)
 			}
 		}
@@ -211,7 +213,7 @@ func output_pcd(z_array [][]float64) {
 }
 
 func is_white(r uint32, g uint32, b uint32) bool {
-	if r == 65535 && g == 65535 && b == 65535 {
+	if r > 60000 && g > 60000 && b > 60000 {
 		return true
 	}
 
@@ -231,6 +233,21 @@ func fix_dir_name(dir_name string) string {
 }
 
 func main() {
-	// scan_dir("/Volumes/C300/Users/evan/Workspaces/one_scan_line/")
-	scan_dir("/Volumes/C300/Users/evan/Workspaces/scan_lines/")
+	scan := flag.Bool("s", false, "scan the given directories")
+	dir_name := flag.String("d", "", "directory of scan files")
+	cal_dir := flag.String("c", "", "directory of calibration scan files")
+	flag.Parse()
+
+	if *dir_name == "" {
+		fmt.Println("need to specify a scan directory")
+	} else {
+		fixed_dir := fix_dir_name(*dir_name)
+		if *scan {
+			if *cal_dir != "" {
+				// TODO : call scan_dir with calibration directory
+			} else {
+				scan_dir(fixed_dir)
+			}
+		}
+	}
 }
