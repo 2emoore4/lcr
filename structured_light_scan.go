@@ -139,13 +139,19 @@ func find_projection_in_line(scan image.Image, y_pix int, est_location int) int 
 	return -99999;
 }
 
-func calibrate_with_image(filename string, scan_number int, cal_array [][]int) {
-	fmt.Println("Opening file " + filename)
-
+func get_image_from_file(filename string) image.Image {
 	file, err := os.Open(filename)
 	if err != nil { panic(err) }
 	r := bufio.NewReader(file)
 	scan, err := png.Decode(r)
+	if err != nil { panic(err) }
+	return scan
+}
+
+func calibrate_with_image(filename string, scan_number int, cal_array [][]int) {
+	fmt.Println("Opening file " + filename)
+
+	scan := get_image_from_file(filename)
 
 	previous_line_location := -1
 	for y := 0; y < image_size_y; y++ {
@@ -164,10 +170,7 @@ func scan_video(filename string) {
 func scan_image_with_parallax(filename string, scan_number int, z_array [][]float64) {
 	fmt.Println("Opening file " + filename + ". scan number " + strconv.Itoa(scan_number))
 
-	file, err := os.Open(filename)
-	if err != nil { panic(err) }
-	r := bufio.NewReader(file)
-	scan, err := png.Decode(r)
+	scan := get_image_from_file(filename)
 
 	start_time := time.Now()
 
@@ -191,12 +194,9 @@ func z_triangulation(x int, y int, scan_number int) float64 {
 }
 
 func scan_image_by_dev(filename string, scan_number int, z_array [][]float64, cal_array [][]int) {
-	fmt.Println("Opening file " + filename + ". scan number " + strconv.Itoa(scan_number))
+	fmt.Println("Opening file " + filename)
 
-	file, err := os.Open(filename)
-	if err != nil { panic(err) }
-	r := bufio.NewReader(file)
-	scan, err := png.Decode(r)
+	scan := get_image_from_file(filename)
 
 	start_time := time.Now()
 
