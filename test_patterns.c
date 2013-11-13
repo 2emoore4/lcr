@@ -318,9 +318,9 @@ static void scan_gray_code() {
     LCR_CMD_SetPatternSeqSetting(&patSeqSet);
 
     LCR_CMD_DefinePatternBMP(0, "Images/test/code/frame00.bmp");
-    LCR_CMD_DefinePatternBMP(0, "Images/test/code/frame01.bmp");
-    LCR_CMD_DefinePatternBMP(0, "Images/test/code/frame02.bmp");
-    LCR_CMD_DefinePatternBMP(0, "Images/test/code/frame03.bmp");
+    LCR_CMD_DefinePatternBMP(1, "Images/test/code/frame01.bmp");
+    LCR_CMD_DefinePatternBMP(2, "Images/test/code/frame02.bmp");
+    LCR_CMD_DefinePatternBMP(3, "Images/test/code/frame03.bmp");
 
     LCR_CMD_StartPatternSeq(1);
 
