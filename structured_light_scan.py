@@ -20,6 +20,7 @@ image_size_y = 480
 sub_sampling_rate = 8
 expected_x_deviation = 100
 maximum_line_size = 15
+gradient_threshold = 165
 
 def rename_files(dir_name):
 	if not os.listdir(dir_name):
@@ -87,7 +88,7 @@ def calibrate_from_dir(dir_name):
 		return cal_array
 
 def find_projection_in_line(scan, y_pix, est_location = -1):
-	enter_white, exit_white = 0, 0
+	enter_white, exit_white = image_size_x, 0
 
 	if est_location == -1 or est_location < expected_x_deviation or est_location > (image_size_x - expected_x_deviation):
 		range = xrange(image_size_x)
@@ -106,7 +107,7 @@ def find_projection_in_line(scan, y_pix, est_location = -1):
 			exit_white = x - 1
 			break
 
-	if enter_white != 0 and exit_white != 0 and (exit_white - enter_white) < maximum_line_size:
+	if enter_white != image_size_x and exit_white != 0 and (exit_white - enter_white) < maximum_line_size:
 		return int((enter_white + exit_white) / 2)
 	else:
 		return -99999
@@ -171,6 +172,52 @@ def scan_image_by_dev(filename, scan_number, z_array, calibration_array = None):
 	total_time = end_time - start_time
 	print "scanned image in " + str(total_time) + " seconds"
 
+def print_boundaries(filename):
+	print "showing boundaries for file " + filename
+	scan = Image.open(filename)
+	for y in xrange(image_size_y):
+		print find_boundaries_in_line(scan, y)
+
+def find_boundaries_in_line(scan, y_pix):
+	gradient_list = []
+	current_x = 0
+
+	# this is similar to the find_projection_in_line method except it uses
+	# this while loop instead of a for loop, in case there are more than
+	# two boundaries in this line.
+	while current_x < image_size_x:
+		# these are for marking boundaries, if they are found.
+		# enter_white is set to image_size_x so that, if the first for
+		# loop reaches the end of the line without finding white, the
+		# second for loop will not execute.
+		enter_white, exit_white = image_size_x, 0
+
+		for x in xrange(current_x, image_size_x):
+			r, g, b = scan.getpixel((x, y_pix))
+			if is_white(r, g, b):
+				enter_white = x
+				break
+
+		for x in xrange(enter_white, image_size_x):
+			r, g, b = scan.getpixel((x, y_pix))
+			if not is_white(r, g, b):
+				exit_white = x - 1
+				break
+
+		if enter_white != image_size_x and exit_white != 0 and (enter_white - exit_white < maximum_line_size):
+			# scan found a white line. append the beginning and end
+			# of this line to the gradient list.
+			gradient_list.append(enter_white)
+			gradient_list.append(exit_white)
+			current_x = exit_white + 1
+		else:
+			# scan reached the end of the line without finding
+			# white. set current_x so that it doesn't satisfy the
+			# while condition.
+			current_x = image_size_x
+
+	return gradient_list
+
 def z_triangulation(x, y, scan_number):
 	y = image_size_y - y
 	theta = translate(scan_number, 0, frame_count - 1, left_theta, right_theta)
@@ -234,12 +281,11 @@ def main():
 	parser.add_option("-d", "--dir", dest="dir_name")
 	parser.add_option("-f", "--file", dest="file_name")
 	parser.add_option("-c", "--cal-dir", dest="cal_dir")
+        parser.add_option("-b", action="store_true", dest="show_boundaries")
 
 	(options, args) = parser.parse_args()
 
-	if not options.dir_name or options.file_name:
-		print "Need to specify directory with -d option"
-	elif options.dir_name:
+	if options.dir_name:
 		fixed_dir = fix_dir_name(options.dir_name)
 
 		if options.rename:
@@ -251,8 +297,10 @@ def main():
 			else:
 				scan_dir(fixed_dir)
 	elif options.file_name:
-		if options.scan:
-			scan_video(options.file_name)
+		if options.show_boundaries:
+			print_boundaries(options.file_name)
+	else:
+		print "need to specify directory name or file name"
 
 if __name__ == "__main__":
 	main()
