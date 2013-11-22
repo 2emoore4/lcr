@@ -1,6 +1,7 @@
 import Image
 import math
 import os
+import sys
 import time
 
 from optparse import OptionParser
@@ -17,10 +18,11 @@ frame_count = 96
 image_size_x = 640
 image_size_y = 480
 
-sub_sampling_rate = 8
+sub_sampling_rate = 1
 expected_x_deviation = 100
 maximum_line_size = 15
 gradient_threshold = 165
+average_stripe_width = 6
 
 def rename_files(dir_name):
 	if not os.listdir(dir_name):
@@ -64,6 +66,38 @@ def scan_dir(dir_name, calibration_dir = None):
 		print "scan finished in " + str(total_time) + " seconds."
 		print str(total_time / len(os.listdir(dir_name))) + " seconds per frame."
 
+def scan_dir_with_code(dir_name, calibration_dir):
+	print "Processing scans in directory: " + dir_name
+	print_divider()
+	if not os.listdir(dir_name) or not os.listdir(calibration_dir):
+		print "Directory is empty, make sure there are scans here."
+	else:
+		start_time = time.clock()
+		cal_array = calibrate_from_code(calibration_dir)
+		end_time = time.clock()
+		total_time = end_time - start_time
+		print "calibration finished in " + str(total_time) + " seconds."
+
+		first_scan = Image.open(dir_name + os.listdir(dir_name)[1])
+		z_array = [[-99999 for x in xrange(first_scan.size[1])] for x in xrange(first_scan.size[0])]
+
+		print "Scanning images and creating z array..."
+		print_divider()
+
+		start_time = time.clock()
+
+		boundary_buffer, scan_buffer = [], []
+		for filename in sorted(os.listdir(dir_name)):
+			if ".png" in filename:
+				scan_image_from_code(dir_name + filename, z_array, cal_array, boundary_buffer, scan_buffer)
+
+		output_pcd(z_array)
+
+		end_time = time.clock()
+		total_time = end_time - start_time
+		print "scan finished in " + str(total_time) + " seconds."
+		print str(total_time / len(os.listdir(dir_name))) + " seconds per frame."
+
 def calibrate_from_dir(dir_name):
 	print "Calibrating scaner with frames in directory: " + dir_name
 	print_divider()
@@ -83,9 +117,111 @@ def calibrate_from_dir(dir_name):
 				scan_number += 1
 
 		print "Finished calibration."
-		print_divider
+		print_divider()
 
 		return cal_array
+
+def calibrate_from_code(dir_name):
+	print "Calibrating scanner with frames that contain gray code, located in directory: " + dir_name
+	print_divider()
+	if not os.listdir(dir_name):
+		print "Calibration directory is empty, make sure there are scans here."
+	else:
+		print "Scanning images and creating calibration array..."
+		print_divider()
+
+		scan_names = []
+		for filename in sorted(os.listdir(dir_name)):
+			if ".png" in filename:
+				scan_names.append(filename)
+
+		if len(scan_names) != 4:
+			print "there need to be 4 scans in this directory"
+			sys.exit(0)
+
+		calibration_boundaries, scans = [], []
+
+		for filename in scan_names:
+			scan = Image.open(dir_name + filename)
+			calibration_boundaries.append(find_boundaries_in_image(scan))
+			scans.append(scan)
+
+		boundary_locations, boundary_to_location = [], []
+		for y in xrange(image_size_y):
+			bound_one = add_possible_ghosts(calibration_boundaries[0][y])
+			bound_two = add_possible_ghosts(calibration_boundaries[1][y])
+			matches = matching_boundaries(bound_two, bound_one)
+			line_boundaries_to_location = []
+			for pair in matches:
+				pair_one, pair_two = pair
+				location = bound_one[pair_two]
+				line_boundaries_to_location.append((location, colors_opposite_boundary(bound_two[pair_one], y, scans)))
+			boundary_to_location.append(line_boundaries_to_location)
+		return boundary_to_location
+
+def add_possible_ghosts(line_boundaries):
+	current_length = len(line_boundaries)
+	current_index = 1
+	while current_index < current_length:
+		if line_boundaries[current_index] - line_boundaries[current_index - 1] > average_stripe_width:
+			ghost_location = int(round((line_boundaries[current_index] + line_boundaries[current_index - 1]) / 2))
+			line_boundaries.insert(current_index, ghost_location)
+			current_length += 1
+			current_index += 1
+		current_index += 1
+	return line_boundaries
+
+def colors_opposite_boundary(x, y, scans):
+	left, right = [], []
+	for scan in scans:
+		l_r, l_g, l_b = scan.getpixel((x - 1, y))
+		r_r, r_g, r_b = scan.getpixel((x + 1, y))
+		left.append(is_white(l_r, l_g, l_b))
+		right.append(is_white(r_r, r_g, r_b))
+	return (left, right)
+
+def matching_boundaries(first_list, second_list):
+	boundaries = []
+	for i in xrange(len(first_list)):
+		boundary_in_first = first_list[i]
+		match_in_second = boundary_in_list(boundary_in_first, second_list)
+		if match_in_second != -1:
+			pair = (i, match_in_second)
+			boundaries.append(pair)
+	return boundaries
+
+def boundary_in_list(query, target_list, fuzziness = 1):
+	index_in_target_list = find_closest_in_list(query, target_list)
+
+	if index_in_target_list == -1:
+		return -1
+
+	difference = query - target_list[index_in_target_list]
+	if math.fabs(difference) <= fuzziness:
+		return index_in_target_list
+	else:
+		return -1
+
+def find_closest_in_list(query, target_list):
+	first_larger_value = -1
+	for i in xrange(len(target_list)):
+		if target_list[i] >= query:
+			first_larger_value = i
+			break
+
+	if first_larger_value == -1:
+		return len(target_list) - 1
+	elif target_list[first_larger_value] == query or first_larger_value == 0:
+		return first_larger_value
+
+	# found index of a larger value. now query is in between f_l_v and f_l_v - 1
+	low_value = target_list[first_larger_value - 1]
+	high_value = target_list[first_larger_value]
+
+	if query - low_value < high_value - query:
+		return first_larger_value - 1
+	else:
+		return first_larger_value
 
 def find_projection_in_line(scan, y_pix, est_location = -1):
 	enter_white, exit_white = image_size_x, 0
@@ -172,11 +308,62 @@ def scan_image_by_dev(filename, scan_number, z_array, calibration_array = None):
 	total_time = end_time - start_time
 	print "scanned image in " + str(total_time) + " seconds"
 
+def scan_image_from_code(filename, z_array, calibration_array, boundary_buffer, scan_buffer):
+	print "opening file " + filename
+	scan = Image.open(filename)
+
+	start_time = time.clock()
+
+ 	all_boundaries = find_boundaries_in_image(scan)
+ 	boundaries_with_ghosts = []
+ 	for y in xrange(image_size_y):
+ 		line_bounds = add_possible_ghosts(all_boundaries[y])
+  		boundaries_with_ghosts.append(line_bounds)
+ 
+ 	# add or add+remove to buffer
+ 	buffer_size = len(boundary_buffer)
+ 	boundary_buffer.append(boundaries_with_ghosts)
+	scan_buffer.append(scan)
+ 	if buffer_size == 5:
+ 		boundary_buffer.pop(0)
+		scan_buffer.pop(0)
+ 	elif buffer_size > 5:
+ 		print "ERROR: scan buffer overfloweth for some reason"
+ 		sys.exit(0)
+
+	if len(boundary_buffer) == 4:
+		for y in xrange(0, image_size_y, sub_sampling_rate):
+			matches = matching_boundaries(boundary_buffer[3][y], boundary_buffer[2][y])
+			line_boundaries_to_location = []
+			for pair in matches:
+				pair_one, pair_two = pair
+				location = boundary_buffer[3][y][pair_one]
+				line_boundaries_to_location.append((location, colors_opposite_boundary(boundary_buffer[3][y][pair_one], y, scan_buffer)))
+			for boundary in line_boundaries_to_location:
+				# match to boundary in calibration_array
+				for i in xrange(len(calibration_array[y])):
+					cal_boundary = calibration_array[y][i]
+					cal_location, cal_history = cal_boundary
+					cur_location, cur_history = boundary
+					if cur_history == cal_history:
+						xdiff = cur_location - cal_location
+						z_array[cur_location][y] = float(xdiff)
+
+	end_time = time.clock()
+	total_time = end_time - start_time
+	print "scanned image in " + str(total_time) + " seconds"
+
 def print_boundaries(filename):
 	print "showing boundaries for file " + filename
 	scan = Image.open(filename)
 	for y in xrange(image_size_y):
-		print find_boundaries_in_line(scan, y)
+		print len(find_boundaries_in_line(scan, y))
+
+def find_boundaries_in_image(scan):
+	boundary_lines = []
+	for y in xrange(image_size_y):
+		boundary_lines.append(find_boundaries_in_line(scan, y))
+	return boundary_lines
 
 def find_boundaries_in_line(scan, y_pix):
 	gradient_list = []
@@ -201,7 +388,7 @@ def find_boundaries_in_line(scan, y_pix):
 		for x in xrange(enter_white, image_size_x):
 			r, g, b = scan.getpixel((x, y_pix))
 			if not is_white(r, g, b):
-				exit_white = x - 1
+				exit_white = x
 				break
 
 		if enter_white != image_size_x and exit_white != 0 and (enter_white - exit_white < maximum_line_size):
@@ -260,7 +447,7 @@ def output_pcd(z_array):
 				pcd_file.write(str(x) + " " + str(image_size_y - y) + " " + str(z_array[x][y]) + "\n")
 
 def is_white(r, g, b):
-	if r > 220 and g > 220 and b > 220:
+	if r > 75 and g > 75 and b > 75:
 		return True
 	else:
 		return False
@@ -285,22 +472,36 @@ def main():
 
 	(options, args) = parser.parse_args()
 
-	if options.dir_name:
-		fixed_dir = fix_dir_name(options.dir_name)
-
-		if options.rename:
+	if options.rename:
+		if options.dir_name:
+			fixed_dir = fix_dir_name(options.dir_name)
 			rename_files(fixed_dir)
-
-		if options.scan:
+		else:
+			print "need to specify a directory name with the rename option"
+			sys.exit(0)
+	elif options.scan:
+		if options.dir_name:
+			fixed_dir = fix_dir_name(options.dir_name)
 			if options.cal_dir:
 				scan_dir(fixed_dir, options.cal_dir)
 			else:
 				scan_dir(fixed_dir)
-	elif options.file_name:
-		if options.show_boundaries:
+		else:
+			print "need to specify a directory name with the scan option"
+			sys.exit(0)
+	elif options.show_boundaries:
+		if options.dir_name and options.cal_dir:
+			fixed_dir = fix_dir_name(options.dir_name)
+			fixed_cal = fix_dir_name(options.cal_dir)
+			scan_dir_with_code(fixed_dir, fixed_cal)
+		elif options.file_name:
 			print_boundaries(options.file_name)
+		else:
+			print "need to specify a directory or file name with the boundaries option"
+			sys.exit(0)
 	else:
-		print "need to specify directory name or file name"
+		print "need to specify a scan option"
+		sys.exit(0)
 
 if __name__ == "__main__":
 	main()
