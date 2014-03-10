@@ -54,6 +54,13 @@ def create_vert_seven():
       draw_white_line_at_x(img, [x])
     img.save('Images/test/vert_seven/line' + str(frame) + '.bmp')
 
+def moire():
+    img = Image.new('1', (608, 684), 'black')
+    for y in xrange(img.size[1]):
+      for x in xrange(0, img.size[0], 2):
+          img.putpixel((x, y), 1)
+    img.save('Images/test/moire.bmp')
+
 def create_weird_code():
   img = Image.new('1', (608, 684), 'black')
   draw_white_line_at_x(img,
@@ -85,6 +92,7 @@ def draw_white_line_at_x(image, x_locations, size = 1):
 def location_of_stripe(stripe_num):
   return stripe * 5
 
+moire()
 create_white_and_black()
 create_half_and_half()
 create_diagonals()

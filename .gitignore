@@ -4,3 +4,4 @@ sample_app
 *.pcd
 Images
 *.out
+*.swp

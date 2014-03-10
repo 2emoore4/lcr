@@ -15,6 +15,7 @@ static void scan_vertical_lines();
 static void scan_vert_seven();
 static void dynamic_load_test();
 static void scan_gray_code();
+static void moire();
 
 /* main() function */
 int main(int argc, char *argv[])
@@ -45,6 +46,8 @@ int main(int argc, char *argv[])
             scan_gray_code();
 	} else if (ch == '0') {
             dynamic_load_test();
+        } else if (ch == '7') {
+            moire();
         }
     }
 
@@ -321,6 +324,34 @@ static void scan_gray_code() {
     LCR_CMD_DefinePatternBMP(1, "Images/test/code/frame01.bmp");
     LCR_CMD_DefinePatternBMP(2, "Images/test/code/frame02.bmp");
     LCR_CMD_DefinePatternBMP(3, "Images/test/code/frame03.bmp");
+
+    LCR_CMD_StartPatternSeq(1);
+
+    uint8 ch;
+    printf("enter 's' to stop sequence.\n");
+    while((ch = getchar()) != 's') {}
+
+    LCR_CMD_StartPatternSeq(0);
+    LCR_CMD_SetDisplayMode((LCR_DisplayMode_t)(0x00));
+}
+
+static void moire() {
+    LCR_PatternSeqSetting_t patSeqSet;
+
+    LCR_CMD_SetDisplayMode((LCR_DisplayMode_t)(0x04));
+
+    patSeqSet.BitDepth = 1;
+    patSeqSet.NumPatterns = 1;
+    patSeqSet.PatternType = PTN_TYPE_NORMAL;
+    patSeqSet.InputTriggerDelay = 0;
+    patSeqSet.InputTriggerType = TRIGGER_TYPE_AUTO;
+    patSeqSet.AutoTriggerPeriod = 250000;
+    patSeqSet.ExposureTime = 250000;
+    patSeqSet.LEDSelect = LED_GREEN;
+    patSeqSet.Repeat = 0;
+    LCR_CMD_SetPatternSeqSetting(&patSeqSet);
+
+    LCR_CMD_DefinePatternBMP(0, "Images/test/lines600.bmp");
 
     LCR_CMD_StartPatternSeq(1);
 
